@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="TerraSense — Real-time landslide risk assessment powered by live weather data, geotechnical scoring, and AI-driven explanations."
+    />
+    <title>TerraSense — Landslide Risk Assessment</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Leaflet CSS + JS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Leaflet.heat plugin -->
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- Animated background particles -->
+    <div class="bg-particles" id="bgParticles"></div>
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="logo">
+          <div class="logo-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <path
+                d="M16 2L4 28h24L16 2z"
+                fill="url(#logoGrad)"
+                opacity="0.9"
+              />
+              <path
+                d="M16 8L9 24h14L16 8z"
+                fill="url(#logoGrad2)"
+                opacity="0.6"
+              />
+              <defs>
+                <linearGradient id="logoGrad" x1="4" y1="2" x2="28" y2="28">
+                  <stop stop-color="#34d399" />
+                  <stop offset="1" stop-color="#06b6d4" />
+                </linearGradient>
+                <linearGradient id="logoGrad2" x1="9" y1="8" x2="23" y2="24">
+                  <stop stop-color="#a78bfa" />
+                  <stop offset="1" stop-color="#06b6d4" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <h1 class="logo-text">TerraSense</h1>
+        </div>
+        <p class="tagline">Real-Time Landslide Risk Intelligence</p>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+      <!-- Input Card -->
+      <section class="card input-card" id="inputSection">
+        <div class="card-header">
+          <div class="card-icon">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+          </div>
+          <h2>Assess Terrain Risk</h2>
+        </div>
+
+        <form id="assessForm" onsubmit="return false;">
+          <div class="form-group">
+            <label for="cityInput">City Name</label>
+            <div class="input-wrapper">
+              <svg
+                class="input-icon"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              <input
+                type="text"
+                id="cityInput"
+                placeholder="e.g. Munnar, Shimla, Darjeeling… or pin on map ↓"
+                required
+                autocomplete="off"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="soilSelect">Soil Type</label>
+              <div class="select-wrapper">
+                <select id="soilSelect" required>
+                  <option value="" disabled selected>Select soil...</option>
+                  <option value="rocky">🪨 Rocky</option>
+                  <option value="sandy">🏖️ Sandy</option>
+                  <option value="loam">🌱 Loam</option>
+                  <option value="clay">🧱 Clay</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="vegSelect">Vegetation Cover</label>
+              <div class="select-wrapper">
+                <select id="vegSelect" required>
+                  <option value="" disabled selected>Select cover...</option>
+                  <option value="dense">🌲 Dense</option>
+                  <option value="moderate">🌿 Moderate</option>
+                  <option value="sparse">🌾 Sparse</option>
+                  <option value="bare">🏜️ Bare</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            class="btn-primary"
+            id="assessBtn"
+            onclick="assessRisk()"
+          >
+            <span class="btn-text">Assess Risk</span>
+            <span class="btn-loader" id="btnLoader">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path
+                  d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
+                />
+              </svg>
+            </span>
+            <svg
+              class="btn-arrow"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </button>
+        </form>
+      </section>
+
+      <!-- ── MAP SECTION ─────────────────────────────────────────────────── -->
+      <section class="card map-card" id="mapSection">
+        <div class="card-header">
+          <div class="card-icon map-icon">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
+              <line x1="9" y1="3" x2="9" y2="18" />
+              <line x1="15" y1="6" x2="15" y2="21" />
+            </svg>
+          </div>
+          <h3>Interactive Risk Map</h3>
+          <div class="map-controls">
+            <button
+              class="map-ctrl-btn active"
+              id="btnPinMode"
+              onclick="setMapMode('pin')"
+              title="Pin & Assess"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              Pin &amp; Assess
+            </button>
+            <button
+              class="map-ctrl-btn"
+              id="btnHeatMode"
+              onclick="setMapMode('heat')"
+              title="Risk Heatmap"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"
+                />
+                <path d="M12 6v6l4 2" />
+              </svg>
+              Heatmap
+            </button>
+            <button
+              class="map-ctrl-btn danger"
+              id="btnClearMap"
+              onclick="clearMap()"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <!-- Mode hint -->
+        <div class="map-hint" id="mapHint">
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span id="mapHintText"
+            >Click anywhere on the map to drop a pin and assess risk at that
+            location.</span
+          >
+        </div>
+
+        <div class="map-frame">
+          <div id="leafletMap"></div>
+
+          <!-- Heatmap loading overlay -->
+          <div
+            class="heatmap-overlay"
+            id="heatmapOverlay"
+            style="display: none"
+          >
+            <div class="heatmap-spinner">
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path
+                  d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
+                />
+              </svg>
+            </div>
+            <p id="heatmapStatus">Sampling grid points…</p>
+            <div class="heatmap-progress-bar">
+              <div id="heatmapProgress"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Error Display -->
+      <div class="error-banner" id="errorBanner" style="display: none">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <line x1="15" y1="9" x2="9" y2="15" />
+          <line x1="9" y1="9" x2="15" y2="15" />
+        </svg>
+        <span id="errorText"></span>
+      </div>
+
+      <!-- Dashboard (hidden until results) -->
+      <section class="dashboard" id="dashboard" style="display: none">
+        <!-- Risk Badge -->
+        <div class="card risk-badge-card" id="riskBadgeCard">
+          <div class="risk-badge" id="riskBadge">
+            <div class="risk-level-text" id="riskLevelText">—</div>
+            <div class="risk-label">RISK LEVEL</div>
+          </div>
+          <div class="city-name" id="cityName"></div>
+          <div class="total-score" id="totalScore"></div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="charts-row">
+          <!-- Gauge -->
+          <div class="card gauge-card">
+            <div class="card-header">
+              <h3>Risk Gauge</h3>
+            </div>
+            <div class="gauge-container">
+              <canvas id="gaugeChart"></canvas>
+              <div class="gauge-score" id="gaugeScore">0</div>
+              <div class="gauge-label">/ 100</div>
+            </div>
+          </div>
+
+          <!-- Bar Chart -->
+          <div class="card bar-card">
+            <div class="card-header">
+              <h3>Parameter Breakdown</h3>
+            </div>
+            <div class="bar-container">
+              <canvas id="barChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Explanation -->
+        <div class="card explanation-card">
+          <div class="card-header">
+            <div class="card-icon ai-icon">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M12 2a4 4 0 0 1 4 4v1a3 3 0 0 1 3 3v1a2 2 0 0 1-2 2h-1v3a4 4 0 0 1-8 0v-3H7a2 2 0 0 1-2-2v-1a3 3 0 0 1 3-3V6a4 4 0 0 1 4-4z"
+                />
+                <circle cx="9" cy="10" r="1" fill="currentColor" />
+                <circle cx="15" cy="10" r="1" fill="currentColor" />
+              </svg>
+            </div>
+            <h3>AI Analysis</h3>
+            <span class="ai-badge">Powered by LLaMA 3</span>
+          </div>
+          <p class="explanation-text" id="explanationText"></p>
+        </div>
+
+        <!-- Raw Data + Warnings -->
+        <div class="card raw-data-card">
+          <div class="card-header">
+            <h3>Environmental Data</h3>
+          </div>
+          <div class="data-grid" id="dataGrid"></div>
+          <div
+            class="warnings"
+            id="warningsContainer"
+            style="display: none"
+          ></div>
+        </div>
+
+        <!-- PDF Export -->
+        <button class="btn-secondary" id="downloadBtn" onclick="downloadPDF()">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Download PDF Report
+        </button>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>TerraSense &copy; 2026 — DSCE Innovation &amp; Design Thinking</p>
+      <p class="footer-sub">Mohit Anjana · Neel Dutta</p>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
